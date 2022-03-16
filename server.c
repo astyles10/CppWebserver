@@ -6,6 +6,10 @@
 #include <string.h>
 #include <errno.h>
 
+// https://www.csd.uoc.gr/~hy556/material/tutorials/cs556-3rd-tutorial.pdf
+// https://www.tutorialspoint.com/http/http_responses.htm
+// https://www.geeksforgeeks.org/tcp-server-client-implementation-in-c/
+
 int main (int argc, char* argv[]) {
   int sockfd, newSocket, valread;
   struct sockaddr_in address;
