@@ -10,6 +10,8 @@
 // https://www.tutorialspoint.com/http/http_responses.htm
 // https://www.geeksforgeeks.org/tcp-server-client-implementation-in-c/
 
+const short port = 3456;
+
 int main (int argc, char* argv[]) {
   int sockfd, newSocket, valread;
   struct sockaddr_in address;
@@ -30,7 +32,7 @@ int main (int argc, char* argv[]) {
 
   address.sin_family = AF_INET;
   address.sin_addr.s_addr = INADDR_ANY;
-  address.sin_port = htons(80);
+  address.sin_port = htons(port);
 
   if (bind(sockfd, (struct sockaddr *)&address, addrlen) < 0) {
     perror("bind failed: ");
