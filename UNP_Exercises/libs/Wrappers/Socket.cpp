@@ -28,8 +28,13 @@ namespace Wrappers
   {
   }
 
-  int Socket::Listen()
+  int Socket::Listen(const int numListeners)
   {
+    if (listen(sockfd, numListeners))
+    {
+      perror("bind");
+      return 1;
+    }
     return 0;
   }
 
@@ -40,6 +45,12 @@ namespace Wrappers
     servaddr.sin_family = addressFamily;
     servaddr.sin_addr.s_addr = htonl(inAddr);
     servaddr.sin_port = htons(port); /* daytime server */
+
+    if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+    {
+      perror("bind");
+      return 0;
+    }
   }
 
   int Socket::Connect(const int addressFamily, const char *address, const unsigned short port)
@@ -70,9 +81,18 @@ namespace Wrappers
     return 1;
   }
 
+  void Socket::SetCallback(std::function<int(int, int)> callback)
+  {
+    fCallback = callback;
+  }
+
+  void Socket::RunCallback()
+  {
+    fCallback(1, 2);
+  }
+
   int Socket::GetSockFD(void)
   {
     return sockfd;
   }
-
 }

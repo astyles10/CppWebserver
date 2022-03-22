@@ -8,13 +8,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Project executable & source files
 add_executable(DaytimeTcpClient daytimetcpcli.cpp)
+add_executable(DaytimeTcpServer daytimetcpsrv.cpp)
 
 add_subdirectory("${PROJECT_SOURCE_DIR}/../libs/Wrappers" build)
 list(APPEND MYLIBS Wrappers)
 
 target_link_libraries(DaytimeTcpClient PUBLIC ${MYLIBS})
+target_link_libraries(DaytimeTcpServer PUBLIC ${MYLIBS})
 
 target_include_directories(DaytimeTcpClient PUBLIC
+                          "${PROJECT_BINARY_DIR}"
+                          "${PROJECT_SOURCE_DIR}/../libs/Wrappers"
+                          )
+
+target_include_directories(DaytimeTcpServer PUBLIC
                           "${PROJECT_BINARY_DIR}"
                           "${PROJECT_SOURCE_DIR}/../libs/Wrappers"
                           )

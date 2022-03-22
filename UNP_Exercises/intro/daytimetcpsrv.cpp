@@ -10,16 +10,23 @@
 
 using namespace Wrappers;
 
+int testCb(int x, int y)
+{
+  printf("x + y = %d\n", (x + y));
+  return 1;
+}
+
 int main(int argc, char **argv)
 {
+  int connfd;
   if (argc != 2)
   {
-    printf("Usage: %s <PORT>\n", argv[1]);
+    printf("Usage: %s <PORT>\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
   char *garbage = NULL;
-  const uint16_t port = strtoul(argv[2], &garbage, 0);
+  const uint16_t port = strtoul(argv[1], &garbage, 0);
 
   Socket *aSocket = Socket::CreateSocket(AF_INET, SOCK_STREAM, 0);
   if (!aSocket)
@@ -29,28 +36,25 @@ int main(int argc, char **argv)
   }
 
   aSocket->Bind(AF_INET, INADDR_ANY, port);
-  aSocket->Listen();
+  aSocket->Listen(1024);
 
   char buff[4096];
   time_t ticks;
 
-  
+  // See https://blog.mbedded.ninja/programming/languages/c-plus-plus/callbacks/
+  aSocket->SetCallback(&testCb);
+  aSocket->RunCallback();
 
-  if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-  {
-    perror("bind");
-    return 1;
-  }
+  aSocket->SetCallback([](int num1, int num2) -> int {
+    return testCb(10, 24);
+  });
 
-  if (listen(listenfd, 1024) < 0)
-  {
-    perror("listen");
-    return 1;
-  }
+  aSocket->RunCallback();
 
   for (;;)
   {
-    if ((connfd = accept(listenfd, (struct sockaddr *)NULL, NULL)) < 0)
+    // TODO: Add callbacks for accept, on data, send data etc.
+    if ((connfd = accept(aSocket->GetSockFD(), (struct sockaddr *)NULL, NULL)) < 0)
     {
       perror("accept");
       return 1;
