@@ -7,20 +7,20 @@
 
 namespace Wrappers
 {
-  Socket *Socket::CreateSocket(const int family, const int type, const int protocol)
+  Socket *Socket::CreateSocket(const uint16_t family, const int type, const int protocol)
   {
     int newSockfd = 0;
     if ((newSockfd = socket(family, type, protocol)) < 0)
     {
-      // TODO: perror uses errno, which does not get set when multi threading
+      // TODO: perror uses errno, which does not get set when multi threading (threads return errno)
       perror("Socket::CreateSocket");
       return nullptr;
     }
     // return new Socket(newSockfd);
-    return new Socket(newSockfd);
+    return new Socket(newSockfd, family);
   }
 
-  Socket::Socket(const int newSockFd) : sockfd(newSockFd)
+  Socket::Socket(const int newSockFd, const uint16_t family) : _sockfd(newSockFd), _family(family)
   {
   }
 
@@ -28,58 +28,68 @@ namespace Wrappers
   {
   }
 
-  int Socket::Listen(const int numListeners)
+  /* Server Functions */
+
+  bool Socket::Listen(const int numListeners)
   {
-    if (listen(sockfd, numListeners))
+    // TODO: ensure this isn't higher than the users allowed max files
+    // See ulimit -n, or cat /proc/sys/fs/file-max
+    if (listen(_sockfd, numListeners))
     {
       perror("bind");
-      return 1;
+      return false;
     }
-    return 0;
+    return true;
   }
 
-  int Socket::Bind(const uint8_t addressFamily, const uint32_t inAddr, const uint16_t port)
+  bool Socket::Bind(const uint32_t inAddr, const uint16_t port)
   {
     struct sockaddr_in servaddr;
     bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = addressFamily;
+    servaddr.sin_family = _family;
     servaddr.sin_addr.s_addr = htonl(inAddr);
     servaddr.sin_port = htons(port); /* daytime server */
 
-    if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+    if (bind(_sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
       perror("bind");
-      return 0;
+      return false;
     }
+
+    return true;
   }
 
-  int Socket::Connect(const int addressFamily, const char *address, const unsigned short port)
+  /* Client Functions */
+
+  bool Socket::Connect(const char *presentationAddress, const uint16_t port)
   {
     struct sockaddr_in servaddr;
     bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = addressFamily;
+    servaddr.sin_family = _family;
     servaddr.sin_port = htons(port);
 
     // inet_pton returns -1 for invalid address family, 0 for invalid address and 1 for success
     // Sets errno on error
-    if (inet_pton(addressFamily, address, &servaddr.sin_addr) < 0)
+    if (inet_pton(_family, presentationAddress, &servaddr.sin_addr) < 0)
     {
       perror("inet_pton");
-      return 0;
+      return false;
     }
 
     // Socket functions from <sys/socket.h> that require pointers to sockaddr* structs
     // do so because socket functions predate ANSI C standard, so void * pointer type
     // was not available at the time of writing
     // connect returns -1 on fail and sets errno, else 0 for success
-    if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+    if (connect(_sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
       perror("connect");
-      return 0;
+      return false;
     }
 
-    return 1;
+    return true;
   }
+
+  /* Callbacks */
 
   void Socket::SetCallback(std::function<int(int, int)> callback)
   {
@@ -91,8 +101,8 @@ namespace Wrappers
     fCallback(1, 2);
   }
 
-  int Socket::GetSockFD(void)
+  const int Socket::GetSockFD(void) const
   {
-    return sockfd;
+    return _sockfd;
   }
 }

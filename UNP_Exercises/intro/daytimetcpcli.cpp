@@ -27,7 +27,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  aSocket->Connect(AF_INET, argv[1], 3456);
+  aSocket->Connect(argv[1], 3456);
 
   int n;
   char recvline[MAXLINE + 1];

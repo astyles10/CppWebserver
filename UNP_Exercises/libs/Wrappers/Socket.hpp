@@ -7,18 +7,19 @@ namespace Wrappers
   {
   public:
     ~Socket();
-    static Socket *CreateSocket(const int family, const int type, const int protocol);
-    int Listen(const int numListeners);
-    int Bind(const uint8_t addressFamily, const uint32_t inAddr, const uint16_t port);
-    int Connect(const int addressFamily, const char *address, const unsigned short port);
+    static Socket *CreateSocket(const uint16_t family, const int type, const int protocol);
+    bool Listen(const int numListeners);
+    bool Bind(const uint32_t inAddr, const uint16_t port);
+    bool Connect(const char *presentationAddress, const uint16_t port);
     void SetCallback(std::function<int(int, int)> callback);
     void RunCallback();
-    int GetSockFD(void);
+    const int GetSockFD(void) const;
 
   private:
-    Socket(const int newSockFd);
+    Socket(const int newSockFd, const uint16_t family);
 
-    int sockfd;
+    int _sockfd;
+    unsigned short _family;
     std::function<int(int, int)> fCallback;
   };
 }
