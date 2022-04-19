@@ -52,19 +52,30 @@ int main(int argc, char **argv)
   });
 
   aSocket->RunCallback();
+  struct sockaddr_in clientSocket;
+  socklen_t sockLen;
 
   for (;;)
   {
     // TODO: Add callbacks for accept, on data, send data etc.
-    if ((connfd = accept(aSocket->GetSockFD(), (struct sockaddr *)NULL, NULL)) < 0)
+    if ((connfd = accept(aSocket->GetSockFD(), (struct sockaddr *)&clientSocket, &sockLen)) < 0)
     {
       perror("accept");
       return 1;
     }
+    // char 
+    printf("Connection details:\n");
+    printf("Port: %d, ", clientSocket.sin_port);
+    char clientAddress[16];
+    const char* someValue = inet_ntop(AF_INET, &clientSocket.sin_addr, clientAddress, sizeof(clientSocket));
+    printf("Client address: %s\n", clientAddress);
+    printf("inet_pton return value: %s\n", someValue);
 
     ticks = time(NULL);
     snprintf(buff, sizeof(buff), "%.24s\r\n", ctime(&ticks));
-    write(connfd, buff, strlen(buff));
+    for (int i = 0; i < strlen(buff); i++) {
+      write(connfd, &buff[i], 1);
+    }
 
     close(connfd);
   }

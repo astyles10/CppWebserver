@@ -8,6 +8,8 @@
 #include <iostream>
 #include <unistd.h>
 
+#include <iostream>
+
 #define MAXLINE 4096
 
 using namespace Wrappers;
@@ -27,7 +29,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  aSocket->Connect(argv[1], 3456);
+  aSocket->Connect(argv[1], 3457);
 
   int n;
   char recvline[MAXLINE + 1];
@@ -35,8 +37,10 @@ int main(int argc, char **argv)
   // Always read socket data in a loop, no guarantee that TCP payload is provided in one packet
   // Unlike UDP, TCP has no 'record boundary', meaning a record (message) may be split into
   // multiple TCP packets.
+  int readCount = 0;
   while ((n = read(aSocket->GetSockFD(), recvline, MAXLINE)) > 0)
   {
+    readCount++;
     // Stream read is ended by closing the connection. This technique is used by HTTP
     // SMTP marks end of a record with two byte sequence: '\r' - '\n'
     // RPC and DNS place a binary count containing record length in front of each record
@@ -53,5 +57,6 @@ int main(int argc, char **argv)
 
   // Unix always closes all open descriptors when process terminates.
   // i.e. sockfd is closed on exit
+  printf("Read count = %d\n", readCount);
   exit(EXIT_SUCCESS);
 }

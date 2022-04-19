@@ -48,7 +48,7 @@ namespace Wrappers
     bzero(&servaddr, sizeof(servaddr));
     servaddr.sin_family = _family;
     servaddr.sin_addr.s_addr = htonl(inAddr);
-    servaddr.sin_port = htons(port); /* daytime server */
+    servaddr.sin_port = htons(port);
 
     if (bind(_sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
