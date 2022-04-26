@@ -7,9 +7,12 @@ namespace Wrappers
   {
   public:
     ~Socket();
-    static Socket *CreateSocket(const uint16_t family, const int type, const int protocol);
+    static Socket* CreateSocket(const uint16_t family, const int type, const int protocol);
+    static Socket* CreateSocketIPv4();
+    static Socket* CreateSocketIPv6();
     bool Listen(const int numListeners);
     bool Bind(const uint32_t inAddr, const uint16_t port);
+    bool Bind(const std::string& presentationAddress, const uint16_t port);
     bool Connect(const char *presentationAddress, const uint16_t port);
     void SetCallback(std::function<int(int, int)> callback);
     void RunCallback();
