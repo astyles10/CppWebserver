@@ -4,7 +4,7 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <sys/socket.h>
-#include "../libs/Wrappers/Socket.hpp"
+#include "../libs/Wrappers/SocketIPv4.hpp"
 #include <iostream>
 #include <unistd.h>
 
@@ -16,20 +16,25 @@ using namespace Wrappers;
 
 int main(int argc, char **argv)
 {
-  if (argc != 2)
+  if (argc != 3)
   {
-    printf("Usage: %s <IPAddress>\n", argv[0]);
+    printf("Usage: %s <ipv4 address> <port>\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
-  Socket *aSocket = Socket::CreateSocket(AF_INET, SOCK_STREAM, 0);
-  if (!aSocket)
+  const std::string &aAddress = argv[1];
+  const std::string &aPort = argv[2];
+
+  char *garbage = NULL; // Option to handle garbage characters
+  const uint16_t port = strtoul(aPort.c_str(), &garbage, 0);
+
+  SocketIPv4 aSocket = SocketIPv4::CreateTcpSocket();
+  if (!aSocket.Valid())
   {
     std::cerr << "Could not create socket, exiting..." << std::endl;
     exit(EXIT_FAILURE);
   }
-
-  aSocket->Connect(argv[1], 3457);
+  aSocket.Connect(aAddress.c_str(), port);
 
   int n;
   char recvline[MAXLINE + 1];
@@ -37,10 +42,8 @@ int main(int argc, char **argv)
   // Always read socket data in a loop, no guarantee that TCP payload is provided in one packet
   // Unlike UDP, TCP has no 'record boundary', meaning a record (message) may be split into
   // multiple TCP packets.
-  int readCount = 0;
-  while ((n = read(aSocket->GetSockFD(), recvline, MAXLINE)) > 0)
+  while ((n = read(aSocket.GetSockFD(), recvline, MAXLINE)) > 0)
   {
-    readCount++;
     // Stream read is ended by closing the connection. This technique is used by HTTP
     // SMTP marks end of a record with two byte sequence: '\r' - '\n'
     // RPC and DNS place a binary count containing record length in front of each record
@@ -57,6 +60,5 @@ int main(int argc, char **argv)
 
   // Unix always closes all open descriptors when process terminates.
   // i.e. sockfd is closed on exit
-  printf("Read count = %d\n", readCount);
   exit(EXIT_SUCCESS);
 }

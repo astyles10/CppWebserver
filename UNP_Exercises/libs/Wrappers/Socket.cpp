@@ -1,9 +1,4 @@
 #include "Socket.hpp"
-#include <sys/socket.h>
-#include <stdio.h>
-#include <iostream>
-#include <arpa/inet.h>
-#include <strings.h>
 
 /*
 TODOs list
@@ -17,37 +12,24 @@ Use class inheritance since underlying functions are the same
 
 namespace Wrappers
 {
-  Socket::Socket(const int newSockFd, const uint16_t family) : _sockfd(newSockFd), _family(family)
+  Socket::Socket()
   {
+  }
+
+  Socket::Socket(const uint16_t family, const int type, const int protocol)
+  {
+    if ((_sockfd = socket(family, type, protocol)) < 0)
+    {
+      // TODO: perror uses errno, which does not get set when multi threading (threads return errno)
+      perror("Socket::CreateSocket");
+    }
+    _family = family;
+    _type = type;
   }
 
   Socket::~Socket()
   {
   }
-
-  Socket* Socket::CreateSocket(const uint16_t family, const int type, const int protocol)
-  {
-    int newSockfd = 0;
-    if ((newSockfd = socket(family, type, protocol)) < 0)
-    {
-      // TODO: perror uses errno, which does not get set when multi threading (threads return errno)
-      perror("Socket::CreateSocket");
-      return nullptr;
-    }
-    return new Socket(newSockfd, family);
-  }
-
-  Socket* Socket::CreateSocketIPv4()
-  {
-    return CreateSocket(AF_INET, SOCK_STREAM, 0);
-  }
-
-  Socket* Socket::CreateSocketIPv6()
-  {
-    return CreateSocket(AF_INET6, SOCK_STREAM, 0);
-  }
-
-  /* Server Functions */
 
   bool Socket::Listen(const int numListeners)
   {
@@ -63,41 +45,17 @@ namespace Wrappers
 
   bool Socket::Bind(const uint32_t inAddr, const uint16_t port)
   {
-    struct sockaddr_in servaddr;
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = _family;
-    servaddr.sin_addr.s_addr = htonl(inAddr);
-    servaddr.sin_port = htons(port);
-
-    if (bind(_sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-    {
-      perror("bind");
-      return false;
-    }
-
-    return true;
+    return false;
   }
 
-  bool Socket::Bind(const std::string& presentationAddress, const uint16_t port)
+  bool Socket::Bind(const std::string &presentationAddress, const uint16_t port)
   {
-    struct sockaddr_in servaddr;
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family = _family;
-    servaddr.sin_addr.s_addr = htonl(inAddr);
-    servaddr.sin_port = htons(port);
-
-    if (bind(_sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-    {
-      perror("bind");
-      return false;
-    }
-
-    return true;
+    return false;
   }
 
   /* Client Functions */
 
-  bool Socket::Connect(const char *presentationAddress, const uint16_t port)
+  bool Socket::Connect(const char *pAddress, const uint16_t port)
   {
     struct sockaddr_in servaddr;
     bzero(&servaddr, sizeof(servaddr));
@@ -106,7 +64,7 @@ namespace Wrappers
 
     // inet_pton returns -1 for invalid address family, 0 for invalid address and 1 for success
     // Sets errno on error
-    if (inet_pton(_family, presentationAddress, &servaddr.sin_addr) < 0)
+    if (inet_pton(_family, pAddress, &servaddr.sin_addr) < 0)
     {
       perror("inet_pton");
       return false;
@@ -125,20 +83,22 @@ namespace Wrappers
     return true;
   }
 
-  /* Callbacks */
-
-  void Socket::SetCallback(std::function<int(int, int)> callback)
+  const bool Socket::Valid() const
   {
-    fCallback = callback;
-  }
-
-  void Socket::RunCallback()
-  {
-    fCallback(1, 2);
+    return _sockfd >= 0;
   }
 
   const int Socket::GetSockFD(void) const
   {
     return _sockfd;
+  }
+
+  std::unique_ptr<Socket::YSockaddrGeneric> Socket::BuildSockaddr(const uint16_t port) const
+  {
+    std::unique_ptr<Socket::YSockaddrGeneric> aSockaddr = std::make_unique<YSockaddrGeneric>();
+    bzero(aSockaddr.get(), sizeof(YSockaddrGeneric));
+    aSockaddr->fIp4Sockaddr.sin_port = htons(port);
+    aSockaddr->fIp4Sockaddr.sin_family = _family;
+    return aSockaddr;
   }
 }
