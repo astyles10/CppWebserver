@@ -41,12 +41,12 @@ namespace Wrappers
     return Bind(aAddress.s_addr, port);
   }
 
-  void SocketIPv4::OnAccept(std::function<std::string (struct sockaddr_in)> onAcceptCallback)
+  void SocketIPv4::OnAccept(std::function<std::string(struct sockaddr_in)> onAcceptCallback)
   {
     _acceptCallback = onAcceptCallback;
   }
 
-  void OnDataReceive(std::function<std::string ()> dataHandler)
+  void SocketIPv4::OnDataReceive(std::function<bool(std::string)> dataHandler)
   {
     _dataHandlerCb = dataHandler;
   }
@@ -64,13 +64,23 @@ namespace Wrappers
         perror("accept");
         return;
       }
-      
 
       const std::string aWrite = _acceptCallback(clientSocket);
-      write(connfd, aWrite.c_str(), aWrite.size());
+      char recvline[4097];
+      int n;
+      while ((n = recv(connfd, recvline, 4097, 0)) > 0)
+      {
+        recvline[n] = 0;
+        if (!_dataHandlerCb(std::string(recvline)))
+        {
+          break;
+        }
+      }
+      bzero(recvline, sizeof(recvline));
+
+      write(connfd, aWrite.c_str(), aWrite.size()); // Blocking
       close(connfd);
     }
   }
-
 
 } // namespace Wrappers

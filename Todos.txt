@@ -1,0 +1,5 @@
+1. Make SocketIPv4::Run() handle reads & writes asynchronously by spawning processes for each
+Bloat option: Use multi threading to handle reads/writes
+
+2. Ensure buffer for read is cleared as expected
+3. Allow setting socket options - changing ports is getting annoying

@@ -11,7 +11,7 @@ namespace Wrappers
     bool Bind(const std::string &pAddress, const uint16_t port);
 
     void OnAccept(std::function<std::string (struct sockaddr_in)> callback);
-    void OnDataReceive(std::function<std::string ()> dataHandler);
+    void OnDataReceive(std::function<bool (std::string)> dataHandler);
     void Run();
 
   protected:
@@ -20,7 +20,7 @@ namespace Wrappers
     void GetConnectionDetails(const struct sockaddr_in);
 
     std::function<std::string (struct sockaddr_in)> _acceptCallback;
-    std::function<std::string ()> _dataHandlerCb;
+    std::function<bool (std::string)> _dataHandlerCb;
   };
 
 } // namespace Wrappers

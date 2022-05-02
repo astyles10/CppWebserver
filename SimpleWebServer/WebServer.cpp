@@ -1,4 +1,5 @@
 #include <SocketIPv4.hpp>
+#include <regex>
 
 using namespace Wrappers;
 
@@ -8,7 +9,32 @@ public:
   HttpParser();
   ~HttpParser();
   void OnData(const std::string &inData);
+  const std::string& GetData(void) const;
+
+private:
+  std::string _data;
 };
+
+HttpParser::HttpParser(): _data({})
+{
+}
+
+HttpParser::~HttpParser()
+{
+}
+
+void HttpParser::OnData(const std::string &inData)
+{
+  _data.clear();
+  std::cout << "Received data: " << inData << "\n";
+  _data = inData;
+
+}
+
+const std::string &HttpParser::GetData(void) const
+{
+  return _data;
+}
 
 int main(int argc, char **argv)
 {
@@ -39,7 +65,18 @@ int main(int argc, char **argv)
   snprintf(buff, sizeof(buff), "%.24s\r\n", ctime(&ticks));
   return std::string(buff); });
 
+  HttpParser aHttpParser;
+
+  auto aThingy = [&aHttpParser](std::string inData) -> bool {
+    aHttpParser.OnData(inData);
+    return false;
+  };
+
+  aSocket.OnDataReceive(aThingy);
+
   aSocket.Run();
+
+  std::cout << "Http parser received: " << aHttpParser.GetData() << std::endl;
 
   return 0;
 }
