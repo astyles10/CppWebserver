@@ -52,7 +52,7 @@ namespace Wrappers
     _acceptCallback = onAcceptCallback;
   }
 
-  void SocketIPv4::OnDataReceive(std::function<std::string ()> dataHandler)
+  void SocketIPv4::OnDataReceive(std::function<bool (const std::string& inData)> dataHandler)
   {
     _dataHandlerCb = dataHandler;
   }
@@ -84,10 +84,15 @@ namespace Wrappers
       write(connfd, aWrite.c_str(), aWrite.size());
 
       auto val = f.get();
-      std::cout << "Read " << val.fBytesRead << "\n";
+      std::cout << "Total read bytes: " << val.fBytesRead << "\n";
       std::cout << val.fBufferData.str() << "\n";
       close(connfd);
     }
+  }
+
+  static bool endsWith(const std::string& str, const std::string& suffix)
+  {
+    return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
   }
 
   SocketIPv4::YStreamBuffer SocketIPv4::HandleRead(const int connfd)
@@ -98,12 +103,17 @@ namespace Wrappers
 
     while ( (bytesRead = read(connfd, buffer, BUFSIZE + 1)) > 0)
     {
+      buffer[bytesRead] = 0;
       aStreambuffer.fBytesRead += bytesRead;
       aStreambuffer.fBufferData << buffer;
-      memset(buffer, 0, BUFSIZE + 1);
-      std::cout << "HandleRead read " << bytesRead << " bytes\n";
+      if (endsWith(aStreambuffer.fBufferData.str(), "\r\n\r\n"))
+      {
+        std::cout << "HandleRead read " << bytesRead << " bytes\n";
+        break;
+      }
       
-      break;
+      memset(buffer, 0, BUFSIZE + 1);
+      // std::cout << "HandleRead read " << bytesRead << " bytes\n";
     }
 
     return aStreambuffer;

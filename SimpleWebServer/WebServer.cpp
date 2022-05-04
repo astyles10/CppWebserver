@@ -15,7 +15,7 @@ private:
   std::string _data;
 };
 
-HttpParser::HttpParser(): _data({})
+HttpParser::HttpParser() : _data({})
 {
 }
 
@@ -74,7 +74,8 @@ int main(int argc, char **argv)
 
   HttpParser aHttpParser;
 
-  auto aThingy = [&aHttpParser](std::string inData) -> bool {
+  auto aThingy = [&aHttpParser](std::string inData) -> bool
+  {
     aHttpParser.OnData(inData);
     return false;
   };

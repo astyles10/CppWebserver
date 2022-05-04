@@ -9,6 +9,7 @@ namespace Wrappers
     typedef struct YStreamBuffer {
       size_t fBytesRead;
       std::stringstream fBufferData;
+      YStreamBuffer() : fBytesRead(0) {}
     } YStreamBuffer;
 
     static SocketIPv4 CreateTcpSocket();
@@ -17,7 +18,7 @@ namespace Wrappers
     bool Bind(const std::string &pAddress, const uint16_t port);
 
     void OnAccept(std::function<std::string (struct sockaddr_in)> callback);
-    void OnDataReceive(std::function<bool (std::string)> dataHandler);
+    void OnDataReceive(std::function<bool (const std::string& inData)> dataHandler);
     void Run();
     YStreamBuffer HandleRead(const int connfd);
 

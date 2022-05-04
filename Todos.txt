@@ -3,3 +3,4 @@ Bloat option: Use multi threading to handle reads/writes
 
 2. Ensure buffer for read is cleared as expected
 3. Allow setting socket options - changing ports is getting annoying
+4. Handle timeouts, different behaviours are occuring on different Linux flavours (man select)
