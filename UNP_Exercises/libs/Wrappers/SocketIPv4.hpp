@@ -1,10 +1,16 @@
 #include "Socket.hpp"
+#include <sstream>
 
 namespace Wrappers
 {
   class SocketIPv4 : public Socket
   {
   public:
+    typedef struct YStreamBuffer {
+      size_t fBytesRead;
+      std::stringstream fBufferData;
+    } YStreamBuffer;
+
     static SocketIPv4 CreateTcpSocket();
     ~SocketIPv4();
     bool Bind(const uint32_t address, const uint16_t port);
@@ -13,6 +19,7 @@ namespace Wrappers
     void OnAccept(std::function<std::string (struct sockaddr_in)> callback);
     void OnDataReceive(std::function<std::string ()> dataHandler);
     void Run();
+    YStreamBuffer HandleRead(const int connfd);
 
   protected:
   private:
