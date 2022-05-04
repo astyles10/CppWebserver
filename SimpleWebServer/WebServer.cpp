@@ -25,10 +25,17 @@ HttpParser::~HttpParser()
 
 void HttpParser::OnData(const std::string &inData)
 {
-  _data.clear();
-  std::cout << "Received data: " << inData << "\n";
-  _data = inData;
+  std::regex aGetRequest("(?<=GET )(.*)(?= HTTP.*)");
+  std::smatch aMatch;
+  std::regex_search(inData, aMatch, aGetRequest);
 
+  std::cout << "Matched data:\n";
+  for (auto a : aMatch)
+  {
+    std::cout << "Page request = " << a << " ";
+  }
+  // std::regex aHttpVersion("(HTTP).*");
+  std::cout << "\n";
 }
 
 const std::string &HttpParser::GetData(void) const

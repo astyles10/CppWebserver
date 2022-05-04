@@ -1,11 +1,17 @@
 #include "SocketIPv4.hpp"
 #include <string.h>
 #include <unistd.h>
+#include <sstream>
+#include <future>
+
+#define BUFSIZE 4096
 
 namespace Wrappers
 {
   SocketIPv4::SocketIPv4(const int type) : Socket(AF_INET, type, 0)
   {
+    int opt = 1;
+    setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
   }
 
   SocketIPv4::~SocketIPv4()
@@ -46,7 +52,7 @@ namespace Wrappers
     _acceptCallback = onAcceptCallback;
   }
 
-  void SocketIPv4::OnDataReceive(std::function<bool(std::string)> dataHandler)
+  void SocketIPv4::OnDataReceive(std::function<std::string ()> dataHandler)
   {
     _dataHandlerCb = dataHandler;
   }
@@ -65,22 +71,43 @@ namespace Wrappers
         return;
       }
 
-      const std::string aWrite = _acceptCallback(clientSocket);
-      char recvline[4097];
-      int n;
-      while ((n = recv(connfd, recvline, 4097, 0)) > 0)
-      {
-        recvline[n] = 0;
-        if (!_dataHandlerCb(std::string(recvline)))
-        {
-          break;
+      auto SendMessages = [](const int connfd) {
+        for (std::string line; std::getline(std::cin, line);) {
+          line.push_back('\n');
+          write(connfd, line.c_str(), line.size());
         }
-      }
-      bzero(recvline, sizeof(recvline));
+      };
 
-      write(connfd, aWrite.c_str(), aWrite.size()); // Blocking
+      const std::string aWrite = _acceptCallback(clientSocket);
+      auto f = std::async(std::launch::async, &SocketIPv4::HandleRead, this, connfd);
+      auto x = std::async(std::launch::async, SendMessages, connfd);
+      write(connfd, aWrite.c_str(), aWrite.size());
+
+      auto val = f.get();
+      std::cout << "Read " << val.fBytesRead << "\n";
+      std::cout << val.fBufferData.str() << "\n";
       close(connfd);
     }
   }
+
+  SocketIPv4::YStreamBuffer SocketIPv4::HandleRead(const int connfd)
+  {
+    char buffer[BUFSIZE + 1];
+    int bytesRead;
+    YStreamBuffer aStreambuffer;
+
+    while ( (bytesRead = read(connfd, buffer, BUFSIZE + 1)) > 0)
+    {
+      aStreambuffer.fBytesRead += bytesRead;
+      aStreambuffer.fBufferData << buffer;
+      memset(buffer, 0, BUFSIZE + 1);
+      std::cout << "HandleRead read " << bytesRead << " bytes\n";
+      
+      break;
+    }
+
+    return aStreambuffer;
+  }
+
 
 } // namespace Wrappers
