@@ -80,12 +80,9 @@ namespace Wrappers
 
       const std::string aWrite = _acceptCallback(clientSocket);
       auto f = std::async(std::launch::async, &SocketIPv4::HandleRead, this, connfd);
-      auto x = std::async(std::launch::async, SendMessages, connfd);
+      // auto x = std::async(std::launch::async, SendMessages, connfd);
+      _dataHandlerCb(f.get().fBufferData.str());
       write(connfd, aWrite.c_str(), aWrite.size());
-
-      auto val = f.get();
-      std::cout << "Total read bytes: " << val.fBytesRead << "\n";
-      std::cout << val.fBufferData.str() << "\n";
       close(connfd);
     }
   }

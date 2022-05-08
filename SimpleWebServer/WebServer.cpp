@@ -12,6 +12,7 @@ public:
   const std::string& GetData(void) const;
 
 private:
+  std::string DetermineResourceRequest(const std::string& inRequest, const std::string& inMethod);
   std::string _data;
 };
 
@@ -25,17 +26,16 @@ HttpParser::~HttpParser()
 
 void HttpParser::OnData(const std::string &inData)
 {
-  std::regex aGetRequest("(?<=GET )(.*)(?= HTTP.*)");
-  std::smatch aMatch;
-  std::regex_search(inData, aMatch, aGetRequest);
+  const std::string aRequestPage = DetermineResourceRequest(inData, "GET ");
+  std::cout << "Requested page: \"" << aRequestPage << "\"\n";
+}
 
-  std::cout << "Matched data:\n";
-  for (auto a : aMatch)
-  {
-    std::cout << "Page request = " << a << " ";
-  }
-  // std::regex aHttpVersion("(HTTP).*");
-  std::cout << "\n";
+std::string HttpParser::DetermineResourceRequest(const std::string& inRequest, const std::string& inMethod)
+{
+  unsigned first = inRequest.find(inMethod);
+  unsigned startPosition = first + inMethod.length();
+  unsigned last = inRequest.find(" HTTP");
+  return inRequest.substr(startPosition, last - startPosition);
 }
 
 const std::string &HttpParser::GetData(void) const
