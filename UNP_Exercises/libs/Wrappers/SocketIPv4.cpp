@@ -52,7 +52,7 @@ namespace Wrappers
     _acceptCallback = onAcceptCallback;
   }
 
-  void SocketIPv4::OnDataReceive(std::function<bool (const std::string& inData)> dataHandler)
+  void SocketIPv4::OnDataReceive(std::function<bool(const std::string &inData)> dataHandler)
   {
     _dataHandlerCb = dataHandler;
   }
@@ -62,6 +62,7 @@ namespace Wrappers
     int connfd;
     struct sockaddr_in clientSocket;
     socklen_t sockLen;
+    pid_t aPid;
     for (;;)
     {
       printf("Waiting...\n");
@@ -71,50 +72,60 @@ namespace Wrappers
         return;
       }
 
-      auto SendMessages = [](const int connfd) {
-        for (std::string line; std::getline(std::cin, line);) {
+      if ((aPid = fork()) == 0)
+      {
+        close(_sockfd);
+        const std::string aWrite = _acceptCallback(clientSocket);
+        const std::string& aTemp = "\r\n\r\n";
+        auto f = std::async(std::launch::async, &SocketIPv4::HandleRead, this, connfd, aTemp);
+        // auto x = std::async(std::launch::async, SendMessages, connfd);
+        _dataHandlerCb(f.get().fBufferData.str());
+
+        const std::string& aWriteBackValue = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body><h1>My First Heading</h1><p>My first paragraph.</p></body></html>\r\n\r\n";
+        write(connfd, aWriteBackValue.c_str(), aWriteBackValue.size());
+        close(connfd);
+        exit(0);
+      }
+
+      auto SendMessages = [](const int connfd)
+      {
+        for (std::string line; std::getline(std::cin, line);)
+        {
           line.push_back('\n');
           write(connfd, line.c_str(), line.size());
         }
       };
 
-      const std::string aWrite = _acceptCallback(clientSocket);
-      auto f = std::async(std::launch::async, &SocketIPv4::HandleRead, this, connfd);
-      // auto x = std::async(std::launch::async, SendMessages, connfd);
-      _dataHandlerCb(f.get().fBufferData.str());
-      write(connfd, aWrite.c_str(), aWrite.size());
       close(connfd);
     }
   }
 
-  static bool endsWith(const std::string& str, const std::string& suffix)
+  static bool endsWith(const std::string &str, const std::string &suffix)
   {
     return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
   }
 
-  SocketIPv4::YStreamBuffer SocketIPv4::HandleRead(const int connfd)
+  SocketIPv4::YStreamBuffer SocketIPv4::HandleRead(const int connfd, const std::string& lineTerminator)
   {
     char buffer[BUFSIZE + 1];
     int bytesRead;
     YStreamBuffer aStreambuffer;
 
-    while ( (bytesRead = read(connfd, buffer, BUFSIZE + 1)) > 0)
+    while ((bytesRead = read(connfd, buffer, BUFSIZE + 1)) > 0)
     {
       buffer[bytesRead] = 0;
       aStreambuffer.fBytesRead += bytesRead;
       aStreambuffer.fBufferData << buffer;
-      if (endsWith(aStreambuffer.fBufferData.str(), "\r\n\r\n"))
+      if (endsWith(aStreambuffer.fBufferData.str(), lineTerminator))
       {
         std::cout << "HandleRead read " << bytesRead << " bytes\n";
         break;
       }
-      
+
       memset(buffer, 0, BUFSIZE + 1);
-      // std::cout << "HandleRead read " << bytesRead << " bytes\n";
     }
 
     return aStreambuffer;
   }
-
 
 } // namespace Wrappers

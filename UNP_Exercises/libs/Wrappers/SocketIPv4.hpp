@@ -20,7 +20,7 @@ namespace Wrappers
     void OnAccept(std::function<std::string (struct sockaddr_in)> callback);
     void OnDataReceive(std::function<bool (const std::string& inData)> dataHandler);
     void Run();
-    YStreamBuffer HandleRead(const int connfd);
+    YStreamBuffer HandleRead(const int connfd, const std::string& lineTerminator);
 
   protected:
   private:

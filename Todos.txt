@@ -1,6 +1,16 @@
 1. Make SocketIPv4::Run() handle reads & writes asynchronously by spawning processes for each
 Bloat option: Use multi threading to handle reads/writes
 
-2. Ensure buffer for read is cleared as expected
-3. Allow setting socket options - changing ports is getting annoying
-4. Handle timeouts, different behaviours are occuring on different Linux flavours (man select)
+WIP: Implemented process spawning for new connections & read/writes as async functions.
+Incoming http requests were not terminating the blocking socket read. Added parameter to SocketIPv4::HandleRead
+to return on special line terminator sequence.
+
+2. Allow setting socket options - changing ports is getting annoying
+
+WIP: Added SO_REUSEADDR & SO_REUSEPORT to SocketIPv4 constructor. Need to allow setting sock opt flags
+
+3. Handle timeouts, different behaviours are occuring on different Linux flavours (man select)
+
+4. Revise code design of socket library. Currently takes in callbacks for connection accepts, reads and writes.
+
+Remove test code from SocketIPv4

@@ -3,16 +3,24 @@
 
 using namespace Wrappers;
 
+class RequestHandler
+{
+public:
+  RequestHandler();
+  ~RequestHandler();
+};
+
 class HttpParser
 {
 public:
   HttpParser();
   ~HttpParser();
   void OnData(const std::string &inData);
-  const std::string& GetData(void) const;
+  const std::string &GetData(void) const;
 
 private:
-  std::string DetermineResourceRequest(const std::string& inRequest, const std::string& inMethod);
+  std::string DetermineResourceRequest(const std::string &inRequest, const std::string &inMethod);
+  std::string GetHttpVersion(const std::string &inRequest);
   std::string _data;
 };
 
@@ -27,15 +35,23 @@ HttpParser::~HttpParser()
 void HttpParser::OnData(const std::string &inData)
 {
   const std::string aRequestPage = DetermineResourceRequest(inData, "GET ");
-  std::cout << "Requested page: \"" << aRequestPage << "\"\n";
+  std::cout << "Http Version: " << GetHttpVersion(inData) << "\nRequested page: \"" << aRequestPage << "\"\n";
 }
 
-std::string HttpParser::DetermineResourceRequest(const std::string& inRequest, const std::string& inMethod)
+std::string HttpParser::DetermineResourceRequest(const std::string &inRequest, const std::string &inMethod)
 {
   unsigned first = inRequest.find(inMethod);
   unsigned startPosition = first + inMethod.length();
   unsigned last = inRequest.find(" HTTP");
   return inRequest.substr(startPosition, last - startPosition);
+}
+
+std::string HttpParser::GetHttpVersion(const std::string &inRequest)
+{
+  std::regex aVersionRegex("HTTP.*");
+  std::smatch aMatch;
+  std::regex_search(inRequest, aMatch, aVersionRegex);
+  return aMatch.str(0);
 }
 
 const std::string &HttpParser::GetData(void) const
@@ -74,7 +90,7 @@ int main(int argc, char **argv)
 
   HttpParser aHttpParser;
 
-  auto aThingy = [&aHttpParser](std::string inData) -> bool
+  auto aThingy = [&aHttpParser](const std::string &inData) -> bool
   {
     aHttpParser.OnData(inData);
     return false;
