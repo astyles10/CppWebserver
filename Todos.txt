@@ -14,3 +14,5 @@ WIP: Added SO_REUSEADDR & SO_REUSEPORT to SocketIPv4 constructor. Need to allow 
 4. Revise code design of socket library. Currently takes in callbacks for connection accepts, reads and writes.
 
 Remove test code from SocketIPv4
+
+5. Make sure incoming/outgoing data is converted to/from network byte order

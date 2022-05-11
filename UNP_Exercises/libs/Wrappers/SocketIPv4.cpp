@@ -76,13 +76,13 @@ namespace Wrappers
       {
         close(_sockfd);
         const std::string aWrite = _acceptCallback(clientSocket);
-        const std::string& aTemp = "\r\n\r\n";
-        auto f = std::async(std::launch::async, &SocketIPv4::HandleRead, this, connfd, aTemp);
+        // const std::string& aTemp = "\r\n\r\n";
+        // auto f = std::async(std::launch::async, &SocketIPv4::HandleRead, this, connfd, aTemp);
         // auto x = std::async(std::launch::async, SendMessages, connfd);
-        _dataHandlerCb(f.get().fBufferData.str());
+        // _dataHandlerCb(f.get().fBufferData.str());
 
-        const std::string& aWriteBackValue = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body><h1>My First Heading</h1><p>My first paragraph.</p></body></html>\r\n\r\n";
-        write(connfd, aWriteBackValue.c_str(), aWriteBackValue.size());
+        // const std::string& aWriteBackValue = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body><h1>My First Heading</h1><p>My first paragraph.</p></body></html>\r\n\r\n";
+        write(connfd, aWrite.c_str(), aWrite.size());
         close(connfd);
         exit(0);
       }

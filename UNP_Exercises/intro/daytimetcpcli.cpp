@@ -36,6 +36,14 @@ int main(int argc, char **argv)
   }
   aSocket.Connect(aAddress.c_str(), port);
 
+  sockaddr_in aSockAddr;
+  socklen_t aSockLen;
+  if (getsockname(aSocket.GetSockFD(), (struct sockaddr*)&aSockAddr, &aSockLen)) {
+    char aPAddress[17];
+    inet_ntop(aSockAddr.sin_family, &aSockAddr.sin_addr, aPAddress, sizeof(aSockAddr));
+    printf("Connected to %s:%d", aPAddress, aSockAddr.sin_port);
+  }
+
   int n;
   char recvline[MAXLINE + 1];
 
