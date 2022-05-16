@@ -1,0 +1,3 @@
+Server currently spawns a new process on client connection. Get process to spawn on other computers/VMs/containers at some point
+
+Implement IPC to communicate between processes
