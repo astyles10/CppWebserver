@@ -1,106 +1,38 @@
 #include <SocketIPv4.hpp>
-#include <regex>
+#include "HttpParser.hpp"
 
 using namespace Wrappers;
 
-class RequestHandler
-{
-public:
-  RequestHandler();
-  ~RequestHandler();
-};
-
-class HttpParser
-{
-public:
-  HttpParser();
-  ~HttpParser();
-  void OnData(const std::string &inData);
-  const std::string &GetData(void) const;
-
-private:
-  std::string DetermineResourceRequest(const std::string &inRequest, const std::string &inMethod);
-  std::string GetHttpVersion(const std::string &inRequest);
-  std::string _data;
-};
-
-HttpParser::HttpParser() : _data({})
-{
-}
-
-HttpParser::~HttpParser()
-{
-}
-
-void HttpParser::OnData(const std::string &inData)
-{
-  const std::string aRequestPage = DetermineResourceRequest(inData, "GET ");
-  std::cout << "Http Version: " << GetHttpVersion(inData) << "\nRequested page: \"" << aRequestPage << "\"\n";
-}
-
-std::string HttpParser::DetermineResourceRequest(const std::string &inRequest, const std::string &inMethod)
-{
-  unsigned first = inRequest.find(inMethod);
-  unsigned startPosition = first + inMethod.length();
-  unsigned last = inRequest.find(" HTTP");
-  return inRequest.substr(startPosition, last - startPosition);
-}
-
-std::string HttpParser::GetHttpVersion(const std::string &inRequest)
-{
-  std::regex aVersionRegex("HTTP.*");
-  std::smatch aMatch;
-  std::regex_search(inRequest, aMatch, aVersionRegex);
-  return aMatch.str(0);
-}
-
-const std::string &HttpParser::GetData(void) const
-{
-  return _data;
-}
-
-int main(int argc, char **argv)
-{
-  if (argc != 2)
-  {
+int main(int argc, char **argv) {
+  if (argc != 2) {
     printf("Usage: %s <port>\n", argv[0]);
     exit(EXIT_FAILURE);
   }
 
   const std::string &aPort = argv[1];
 
-  char *garbage = NULL; // Option to handle garbage characters
+  char *garbage = NULL;  // Option to handle garbage characters
   const uint16_t port = strtoul(aPort.c_str(), &garbage, 0);
   printf("Listening on port %d...\n", port);
   SocketIPv4 aSocket = SocketIPv4::CreateTcpSocket();
   aSocket.Bind(INADDR_ANY, port);
   aSocket.Listen(1024);
 
-  aSocket.OnAccept([](struct sockaddr_in connection) -> std::string
-                   {
-  time_t ticks;
-  char buff[4096];
-  char clientAddress[16];
-  inet_ntop(AF_INET, &connection.sin_addr, clientAddress, sizeof(connection));
-  printf("Connection established from %s:%d\n", clientAddress, connection.sin_port);
-
-  ticks = time(NULL);
-  snprintf(buff, sizeof(buff), "%.24s\r\n", ctime(&ticks));
-  return std::string(buff); });
+  aSocket.OnAccept([&](struct sockaddr_in &connection) {
+    char clientAddress[16];
+    inet_ntop(AF_INET, &connection.sin_addr, clientAddress, sizeof(connection));
+    printf("Connection established from %s:%d\n", clientAddress,
+           connection.sin_port);
+  });
 
   HttpParser aHttpParser;
 
-  auto aThingy = [&aHttpParser](const std::string &inData) -> bool
-  {
-    aHttpParser.OnData(inData);
-    return false;
+  auto aThingy = [&aHttpParser](const std::string &inData) -> std::string {
+    const std::string &aWriteBackValue = aHttpParser.OnData(inData);
+    return aWriteBackValue;
   };
 
-  aSocket.OnDataReceive(aThingy);
-
+  aSocket.OnDataReceive(aThingy, "\r\n\r\n");
   aSocket.Run();
-
-  std::cout << "Http parser received: " << aHttpParser.GetData() << std::endl;
-
   return 0;
 }

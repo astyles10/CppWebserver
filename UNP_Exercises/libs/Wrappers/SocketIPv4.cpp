@@ -1,131 +1,117 @@
 #include "SocketIPv4.hpp"
+
 #include <string.h>
 #include <unistd.h>
-#include <sstream>
+
 #include <future>
+#include <sstream>
 
 #define BUFSIZE 4096
 
-namespace Wrappers
-{
-  SocketIPv4::SocketIPv4(const int type) : Socket(AF_INET, type, 0)
-  {
-    int opt = 1;
-    setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt));
+namespace Wrappers {
+SocketIPv4::SocketIPv4(const int type) : Socket(AF_INET, type, 0) {
+  int opt = 1;
+  setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
+             sizeof(opt));
+}
+
+SocketIPv4::~SocketIPv4() {}
+
+SocketIPv4 SocketIPv4::CreateTcpSocket() { return SocketIPv4(SOCK_STREAM); }
+
+bool SocketIPv4::Bind(const uint32_t address, const uint16_t port) {
+  std::unique_ptr<YSockaddrGeneric> aSockaddr = BuildSockaddr(port);
+  aSockaddr->fIp4Sockaddr.sin_addr.s_addr = htonl(address);
+
+  if (bind(_sockfd, (struct sockaddr *)&aSockaddr->fIp4Sockaddr,
+           sizeof(aSockaddr->fIp4Sockaddr)) < 0) {
+    perror("bind");
+    return false;
   }
+  return true;
+}
 
-  SocketIPv4::~SocketIPv4()
-  {
+bool SocketIPv4::Bind(const std::string &pAddress, const uint16_t port) {
+  struct in_addr aAddress;
+  if (inet_pton(_family, pAddress.c_str(), &aAddress) < 0) {
+    perror("inet_pton");
+    return false;
   }
+  return Bind(aAddress.s_addr, port);
+}
 
-  SocketIPv4 SocketIPv4::CreateTcpSocket()
-  {
-    return SocketIPv4(SOCK_STREAM);
-  }
+void SocketIPv4::OnAccept(
+    std::function<void(struct sockaddr_in &)> onAcceptCallback) {
+  _acceptCallback = onAcceptCallback;
+}
 
-  bool SocketIPv4::Bind(const uint32_t address, const uint16_t port)
-  {
-    std::unique_ptr<YSockaddrGeneric> aSockaddr = BuildSockaddr(port);
-    aSockaddr->fIp4Sockaddr.sin_addr.s_addr = htonl(address);
+void SocketIPv4::OnDataReceive(
+    std::function<std::string(const std::string &inData)> dataHandler,
+    const std::string &terminator = "") {
+  _dataHandlerCb = dataHandler;
+  _terminator = terminator;
+}
 
-    if (bind(_sockfd, (struct sockaddr *)&aSockaddr->fIp4Sockaddr, sizeof(aSockaddr->fIp4Sockaddr)) < 0)
-    {
-      perror("bind");
-      return false;
+void SocketIPv4::Run() {
+  int connfd;
+  struct sockaddr_in clientSocket;
+  socklen_t sockLen;
+  pid_t aPid;
+  for (;;) {
+    printf("Waiting...\n");
+    if ((connfd = accept(_sockfd, (struct sockaddr *)&clientSocket, &sockLen)) <
+        0) {
+      perror("accept");
+      return;
     }
-    return true;
-  }
 
-  bool SocketIPv4::Bind(const std::string &pAddress, const uint16_t port)
-  {
-    struct in_addr aAddress;
-    if (inet_pton(_family, pAddress.c_str(), &aAddress) < 0)
-    {
-      perror("inet_pton");
-      return false;
-    }
-    return Bind(aAddress.s_addr, port);
-  }
-
-  void SocketIPv4::OnAccept(std::function<std::string(struct sockaddr_in)> onAcceptCallback)
-  {
-    _acceptCallback = onAcceptCallback;
-  }
-
-  void SocketIPv4::OnDataReceive(std::function<bool(const std::string &inData)> dataHandler)
-  {
-    _dataHandlerCb = dataHandler;
-  }
-
-  void SocketIPv4::Run()
-  {
-    int connfd;
-    struct sockaddr_in clientSocket;
-    socklen_t sockLen;
-    pid_t aPid;
-    for (;;)
-    {
-      printf("Waiting...\n");
-      if ((connfd = accept(_sockfd, (struct sockaddr *)&clientSocket, &sockLen)) < 0)
-      {
-        perror("accept");
-        return;
+    if ((aPid = fork()) == 0) {
+      close(_sockfd);
+      if (_acceptCallback) {
+        _acceptCallback(clientSocket);
       }
 
-      if ((aPid = fork()) == 0)
-      {
-        close(_sockfd);
-        const std::string aWrite = _acceptCallback(clientSocket);
-        // const std::string& aTemp = "\r\n\r\n";
-        // auto f = std::async(std::launch::async, &SocketIPv4::HandleRead, this, connfd, aTemp);
-        // auto x = std::async(std::launch::async, SendMessages, connfd);
-        // _dataHandlerCb(f.get().fBufferData.str());
+      auto aAsyncRead =
+          std::async(std::launch::async, &SocketIPv4::HandleRead, this, connfd);
+      YStreamBuffer aReadBuffer = aAsyncRead.get();
 
-        // const std::string& aWriteBackValue = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=UTF-8\r\nConnection: close\r\n\r\n<!DOCTYPE html><html><body><h1>My First Heading</h1><p>My first paragraph.</p></body></html>\r\n\r\n";
-        write(connfd, aWrite.c_str(), aWrite.size());
-        close(connfd);
-        exit(0);
+      if (_dataHandlerCb) {
+        const std::string &aWriteData =
+            _dataHandlerCb(aReadBuffer.fBufferData.str());
+        write(connfd, aWriteData.c_str(), aWriteData.size());
       }
-
-      auto SendMessages = [](const int connfd)
-      {
-        for (std::string line; std::getline(std::cin, line);)
-        {
-          line.push_back('\n');
-          write(connfd, line.c_str(), line.size());
-        }
-      };
-
       close(connfd);
-    }
-  }
-
-  static bool endsWith(const std::string &str, const std::string &suffix)
-  {
-    return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
-  }
-
-  SocketIPv4::YStreamBuffer SocketIPv4::HandleRead(const int connfd, const std::string& lineTerminator)
-  {
-    char buffer[BUFSIZE + 1];
-    int bytesRead;
-    YStreamBuffer aStreambuffer;
-
-    while ((bytesRead = read(connfd, buffer, BUFSIZE + 1)) > 0)
-    {
-      buffer[bytesRead] = 0;
-      aStreambuffer.fBytesRead += bytesRead;
-      aStreambuffer.fBufferData << buffer;
-      if (endsWith(aStreambuffer.fBufferData.str(), lineTerminator))
-      {
-        std::cout << "HandleRead read " << bytesRead << " bytes\n";
-        break;
-      }
-
-      memset(buffer, 0, BUFSIZE + 1);
+      exit(0);
     }
 
-    return aStreambuffer;
+    close(connfd);
+  }
+}
+
+static inline bool endsWith(const std::string &str, const std::string &suffix) {
+  return str.size() >= suffix.size() &&
+         0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+}
+
+SocketIPv4::YStreamBuffer SocketIPv4::HandleRead(const int connfd) {
+  char buffer[BUFSIZE + 1];
+  int bytesRead;
+  YStreamBuffer aStreambuffer;
+
+  std::cout << "Waiting for data...\n";
+  while ((bytesRead = read(connfd, buffer, BUFSIZE + 1)) > 0) {
+    buffer[bytesRead] = 0;
+    aStreambuffer.fBytesRead += bytesRead;
+    aStreambuffer.fBufferData << buffer;
+    if (endsWith(aStreambuffer.fBufferData.str(), _terminator)) {
+      std::cout << "HandleRead read " << bytesRead << " bytes\n";
+      break;
+    }
+
+    memset(buffer, 0, BUFSIZE + 1);
   }
 
-} // namespace Wrappers
+  return aStreambuffer;
+}
+
+}  // namespace Wrappers
