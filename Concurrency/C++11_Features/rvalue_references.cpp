@@ -35,6 +35,7 @@ class Y : public X {
   Y(const Y&) = delete;
   Y& operator=(const Y&) = delete;
   ~Y() {}
+  static const int val = 5;
 };
 
 class MoveOnly {
