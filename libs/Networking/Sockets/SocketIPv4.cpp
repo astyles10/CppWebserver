@@ -8,7 +8,7 @@
 
 #define BUFSIZE 4096
 
-namespace Wrappers {
+namespace Networking::Sockets {
 SocketIPv4::SocketIPv4(const int type) : Socket(AF_INET, type, 0) {
   int opt = 1;
   setsockopt(_sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt,
@@ -88,7 +88,6 @@ void SocketIPv4::Run() {
   }
 }
 
-// TODO: Move
 static inline bool endsWith(const std::string &str, const std::string &suffix) {
   return str.size() >= suffix.size() &&
          0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
@@ -113,4 +112,4 @@ SocketIPv4::YStreamBuffer SocketIPv4::HandleRead(const int connfd) {
   return aStreambuffer;
 }
 
-}  // namespace Networking::Sockets
+}  // namespace Wrappers

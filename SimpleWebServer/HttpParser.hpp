@@ -4,17 +4,28 @@
 #include <string>
 
 class HttpParser {
+  typedef struct HttpResponse {
+    uint16_t fResponseCode;
+    std::string fDescription;
+    std::string fContentType;
+    std::string fConnection;
+    std::string fData;
+
+    HttpResponse() = default;
+  } HttpResponse;
+
  public:
-  HttpParser();
-  ~HttpParser();
+  HttpParser() = default;
+  ~HttpParser() = default;
   std::string OnData(const std::string &inData);
-  const std::string &GetData(void) const;
 
  private:
+  std::string CraftResponseMessage(const HttpResponse &inResponse) const;
   std::string DetermineResourceRequest(const std::string &inRequest,
                                        const std::string &inMethod);
   std::string GetHttpVersion(const std::string &inRequest);
-  std::string _data;
+
+  std::string _httpVersion;
 };
 
 #endif

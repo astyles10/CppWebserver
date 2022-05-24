@@ -1,7 +1,7 @@
-#include <SocketIPv4.hpp>
+#include <Networking/Sockets/SocketIPv4.hpp>
 #include "HttpParser.hpp"
 
-using namespace Wrappers;
+using namespace Networking::Sockets;
 
 int main(int argc, char **argv) {
   if (argc != 2) {
