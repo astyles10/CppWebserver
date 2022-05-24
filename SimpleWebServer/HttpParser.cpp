@@ -7,13 +7,27 @@
 
 // HTTP Request messages
 // CONNECT, DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, TRACE
-std::map<std::string, std::function<void()> >fCallbacks;
 
-void HandleGetRequest() {
+/* 
+ * 
+ * CONNECT server.example.com:80 HTTP/1.1
+ * Host: server.example.com:80
+ * Proxy-Authorization: basic aGVsbG86d29ybGQ=
+ * 
+ * DELETE /file.html HTTP/1.1
+ * Host: example.com
+ * 
+ * GET /index.html
+ * 
+ * 
+ */
 
-}
 
 
+
+std::map<std::string, std::function<void()> > fCallbacks;
+
+void HandleGetRequest(const std::string &inRequest) {}
 
 std::string HttpParser::CraftResponseMessage(
     const HttpResponse &inResponse) const {
@@ -29,9 +43,12 @@ std::string HttpParser::CraftResponseMessage(
 
 std::string HttpParser::OnData(const std::string &inData) {
   HttpResponse aResponse;
-  std::string aRequestPage = DetermineResourceRequest(inData, "GET /");
+  const std::string& aRequestType = DetermineRequestType(inData);
+  // TODO: Ensure directory traversal not possible
+  std::string aRequestPage = "./" + DetermineResourceRequest(inData, aRequestType);
+  std::cout << "Requested page: \"" << aRequestPage << "\"\n";
   _httpVersion = GetHttpVersion(inData);
-  if (aRequestPage.empty()) {
+  if (aRequestPage == "./") {
     aRequestPage = "index.html";
   }
 
@@ -79,9 +96,17 @@ std::string HttpParser::OnData(const std::string &inData) {
   return CraftResponseMessage(aResponse);
 }
 
+std::string HttpParser::DetermineRequestType(
+    const std::string &inRequest) const {
+  for (const auto &aType : fRequestTypes)
+    if (inRequest.rfind(aType, 0) == 0) return aType;
+  return {};
+}
+
 std::string HttpParser::DetermineResourceRequest(const std::string &inRequest,
                                                  const std::string &inMethod) {
-  unsigned first = inRequest.find(inMethod);
+  // TODO: Prevent directory traversal https://owasp.org/www-community/attacks/Path_Traversal
+  unsigned first = inRequest.find(inMethod) + 1;
   unsigned startPosition = first + inMethod.length();
   unsigned last = inRequest.find(" HTTP");
   return inRequest.substr(startPosition, last - startPosition);

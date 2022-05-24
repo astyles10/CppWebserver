@@ -1,6 +1,7 @@
 #ifndef HTTP_PARSER_H_
 #define HTTP_PARSER_H_
 
+#include <array>
 #include <string>
 
 class HttpParser {
@@ -21,9 +22,14 @@ class HttpParser {
 
  private:
   std::string CraftResponseMessage(const HttpResponse &inResponse) const;
+  std::string DetermineRequestType(const std::string &inRequest) const;
   std::string DetermineResourceRequest(const std::string &inRequest,
                                        const std::string &inMethod);
   std::string GetHttpVersion(const std::string &inRequest);
+
+  const std::array<std::string, 9> fRequestTypes = {
+      "CONNECT", "DELETE", "GET", "HEAD", "OPTIONS",
+      "PATCH",   "POST",   "PUT", "TRACE"};
 
   std::string _httpVersion;
 };
