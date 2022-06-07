@@ -1,0 +1,5 @@
+Write the server code to allow for users to change the behaviour of http request handling
+E.g. Using the server as a REST API, or a standard web based file server
+
+* Use the web server to host a REST API
+* Handle web socket connections
