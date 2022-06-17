@@ -1,9 +1,19 @@
 <!DOCTYPE html>
+<script>
+  function submitPostRequest(e) {
+    e.preventDefault();
+  }
+</script>
 <html>
 <body>
 
 <h1>My First Heading</h1>
 <p>My first paragraph.</p>
+<form action="/test" method="POST" onsubmit="submitPostRequest(e)">
+  <label for="fname">First name:</label><br>
+  <input type="text" id="fname" name="fname" value="John"><br>
+  <input type="submit" value="Submit">
+</form>
 
 </body>
 </html>

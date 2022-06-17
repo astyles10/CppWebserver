@@ -1,4 +1,5 @@
 #include <Networking/Sockets/SocketIPv4.hpp>
+
 #include "HttpParser.hpp"
 
 using namespace Networking::Sockets;
@@ -31,6 +32,19 @@ int main(int argc, char **argv) {
     const std::string &aWriteBackValue = aHttpParser.OnData(inData);
     return aWriteBackValue;
   };
+
+  aHttpParser.SetPostRequestHandler(
+      "test", [&](const std::string &inData) -> HttpParser::HttpResponse {
+        std::cout << "Received post request to /test\n";
+        HttpParser::HttpResponse aResponse;
+        aResponse.fDescription = "OK";
+        aResponse.fResponseCode = 200;
+        aResponse.fConnection = "close";
+        aResponse.fContentType = "text/plain";
+        aResponse.fData = "Received POST!";
+
+        return aResponse;
+      });
 
   aSocket.OnDataReceive(aThingy, "\r\n\r\n");
   aSocket.Run();

@@ -130,5 +130,9 @@ int main()
   std::printf("Y is convertible to X: %s\n", std::is_convertible<Y, X>().value ? "true" : "false");
   std::printf("X is convertible to Y: %s\n", (std::is_convertible<X, Y>().value ? "true" : "false"));
   std::mutex aMutex;
+
+  MoveOnly aMoveOnly, aMoveOnly2;
+
+  aMoveOnly = static_cast<MoveOnly&&>(aMoveOnly2);
   return 0;
 }
