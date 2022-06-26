@@ -55,7 +55,7 @@ void SocketIPv4::OnDataReceive(
 void SocketIPv4::Run() {
   int connfd;
   struct sockaddr_in clientSocket;
-  socklen_t sockLen;
+  socklen_t sockLen = sizeof(clientSocket);
   pid_t aPid;
   for (;;) {
     printf("Waiting...\n");

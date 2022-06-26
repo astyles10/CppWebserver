@@ -35,11 +35,34 @@
 
 // https://restfulapi.net/http-methods/
 
+HttpParser::HttpParser() {
+  _callbacks.emplace("GET", std::bind(&HttpParser::HandleGetRequest, this, std::placeholders::_1));
+  _callbacks.emplace("POST", std::bind(&HttpParser::HandlePostRequest, this, std::placeholders::_1));
+}
+
+std::string HttpParser::OnData(const std::string &inData) {
+  _httpVersion = GetHttpVersion(inData);
+  std::string aRequestType = DetermineRequestType(inData);
+  std::cout << "OnData received: \n" << inData << "\n";
+
+  const auto &aCallback = _callbacks.find(aRequestType);
+  if (aCallback != _callbacks.end()) {
+    return CraftResponseMessage(aCallback->second(inData));
+  }
+  return {};
+}
+
+void HttpParser::SetPostRequestHandler(const std::string &inResourcePath,
+                                       HttpCallback inCallback) {
+  _postCallbacks.emplace(inResourcePath, inCallback);
+}
+
 HttpParser::HttpResponse HttpParser::HandleGetRequest(
     const std::string &inRequest) {
   HttpResponse aResponse;
   std::string aRequestPage = DetermineResourceRequest(inRequest, "GET");
   std::cout << "Requested page: \"" << aRequestPage << "\"\n";
+  std::cout << "Full request: \n" << inRequest << "\n";
 
   if (aRequestPage.empty()) {
     aRequestPage = "index.html";
@@ -90,10 +113,17 @@ HttpParser::HttpResponse HttpParser::HandlePostRequest(
   // E.g. POST /test HTTP/1.1 would need a user defined callback set to handle
   // the incoming request on /test
 
-  const std::string &aPostRequest = DetermineResourceRequest(inRequest, "POST");
-  const auto& aCallback = fPostCallbacks.find(aPostRequest);
-  if (aCallback != fPostCallbacks.end())
-    aCallback->second();
+  const std::string &aRequestPath = DetermineResourceRequest(inRequest, "POST");
+  std::cout << "Handling POST request!\n";
+  const auto &aCallback = _postCallbacks.find(aRequestPath);
+  if (aCallback != _postCallbacks.end()) aResponse = aCallback->second(inRequest);
+  // else {
+  //   aResponse.fResponseCode = 404;
+  //   aResponse.fDescription = "File not found";
+  //   aResponse.fConnection = "close";
+  //   aResponse.fContentType = "text/plain";
+  //   aResponse.fData = "HTTP 404: File not found :(";
+  // }
 
   return aResponse;
 }
@@ -108,17 +138,6 @@ std::string HttpParser::CraftResponseMessage(
                   << inResponse.fData << "\r\n\r\n";
 
   return aResponseBuffer.str();
-}
-
-std::string HttpParser::OnData(const std::string &inData) {
-  _httpVersion = GetHttpVersion(inData);
-  std::string aRequestType = DetermineRequestType(inData);
-
-  // TODO: Handle Request type using request handler (map of string : callback
-  // functions)
-  if (aRequestType == "GET")
-    return CraftResponseMessage(HandleGetRequest(inData));
-  return {};
 }
 
 std::string HttpParser::DetermineRequestType(
@@ -145,16 +164,16 @@ std::string HttpParser::DetermineResourceRequest(const std::string &inRequest,
   return aResource;
 }
 
-void HttpParser::RemoveTraversalSequences(std::string &inoutResourceRequest) {
-  std::size_t aEndPosition = 0;
-  while (inoutResourceRequest.find("../", aEndPosition) != std::string::npos)
-    aEndPosition += 3;
-  inoutResourceRequest = inoutResourceRequest.substr(aEndPosition);
-}
-
 std::string HttpParser::GetHttpVersion(const std::string &inRequest) {
   std::regex aVersionRegex("HTTP.*");
   std::smatch aMatch;
   std::regex_search(inRequest, aMatch, aVersionRegex);
   return aMatch.str(0);
+}
+
+void HttpParser::RemoveTraversalSequences(std::string &inoutResourceRequest) {
+  std::size_t aEndPosition = 0;
+  while (inoutResourceRequest.find("../", aEndPosition) != std::string::npos)
+    aEndPosition += 3;
+  inoutResourceRequest = inoutResourceRequest.substr(aEndPosition);
 }

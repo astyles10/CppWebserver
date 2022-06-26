@@ -2,9 +2,12 @@
 #define HTTP_PARSER_H_
 
 #include <array>
+#include <functional>
+#include <map>
 #include <string>
 
 class HttpParser {
+  public:
   typedef struct HttpResponse {
     uint16_t fResponseCode;
     std::string fDescription;
@@ -15,10 +18,12 @@ class HttpParser {
     HttpResponse() = default;
   } HttpResponse;
 
- public:
-  HttpParser() = default;
+  typedef std::function<HttpResponse (const std::string&)> HttpCallback;
+
+  HttpParser();
   ~HttpParser() = default;
   std::string OnData(const std::string &inData);
+  void SetPostRequestHandler(const std::string& inResourcePath, HttpCallback inCallback);
 
  private:
   HttpResponse HandleGetRequest(const std::string &inRequest);
@@ -36,7 +41,9 @@ class HttpParser {
 
   std::string _httpVersion;
 
-  std::map<std::string, std::function<void()> > fPostCallbacks;
+  std::map<std::string, HttpCallback> _callbacks;
+
+  std::map<std::string, HttpCallback> _postCallbacks;
 };
 
 #endif
