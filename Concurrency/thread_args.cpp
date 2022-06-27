@@ -1,6 +1,6 @@
+#include <functional>
 #include <iostream>
 #include <thread>
-#include <functional>
 
 class widget {
  public:
@@ -21,6 +21,11 @@ void update_widget_data(int inId, widget& inWidget) {
   inWidget.id = inId;
 }
 
+void update_unique_widget(int inId, std::unique_ptr<widget> inWidget) {
+  inWidget->id = inId;
+  inWidget->data = 99999;
+}
+
 widget oops_widget(int id) {
   widget aWidget;
   // Can't compile without using std::ref for widget reference parameter
@@ -35,10 +40,22 @@ int main() {
 
   // std::thread constructor and std::bind use same mechanism to call a
   // member function with parameters
-  const auto& aBoundFunction = std::bind(&widget::update_data, &aWidget, std::placeholders::_1);
+  const auto& aBoundFunction =
+      std::bind(&widget::update_data, &aWidget, std::placeholders::_1);
   aBoundFunction(420);
   std::thread aThread(&widget::update_data, &aWidget, 737373);
   aThread.join();
   std::printf("Widget ptr = %p, data = %d\n", &aWidget, aWidget.data);
+
+  // Like unique_ptr owning a dynamic object, threads own a resource in a
+  // single thread of execution
+  // Threads are move only (cannot be copied)
+  std::unique_ptr<widget> aUniqueWidget(new widget);
+  std::thread aAnotherThread(update_unique_widget, 101,
+                             std::move(aUniqueWidget));
+  aAnotherThread.join();
+  if (aUniqueWidget.get() == nullptr) {
+    std::cout << "aUniqueWidget passed ownership to thread!\n";
+  }
   return 0;
 }
