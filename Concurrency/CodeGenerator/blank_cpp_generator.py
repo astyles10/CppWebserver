@@ -1,4 +1,6 @@
 import sys
+import yaml
+import ast
 
 # Either take command line arguments or read inputs from user
 # Encapsulate features like threads, memory, I/o etc.
@@ -22,7 +24,10 @@ class function_generator:
       self.namespace = namespace
 
   def debug_print(self):
-    print(f"{self.return_type} {self.namespace}::{self.name}")
+    function_print = str("{return_type} {name} () {{\nreturn 1;\n}}\n".format(return_type = self.return_type, name = self.name))
+    print(function_print)
+
+  # def print_class_function():
 
 class class_generator:
   def __init__(self, class_name):
@@ -35,6 +40,15 @@ class class_generator:
 # def generate_function():
 
 if __name__ == "__main__":
-  print(f"Arguments: {sys.argv[1:]}")
-  generator = function_generator("FunctionName", "void", "Namespace")
-  generator.debug_print()
+  if len(sys.argv) > 1:
+    with open(sys.argv[1], 'r') as file:
+      config_file = dict(yaml.safe_load(file))
+    functions = dict(config_file['functions'])
+    for function_name in functions.keys():
+      function_properties = functions[function_name]
+      generator = function_generator(function_name, function_properties['return_type'])
+    
+    # generator = function_generator("main", "int", "Namespace")
+    generator.debug_print()
+  else:
+    print(f"Usage: {sys.argv[0]} <config_file.yaml>")
